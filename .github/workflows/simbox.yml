@@ -1,0 +1,51 @@
+# simbox-workflow: 2
+# Managed by Simbox. Edit steps in the dashboard or with `simbox workflow`;
+# direct edits are replaced the next time Simbox saves or repairs this file.
+name: simbox
+run-name: "simbox ${{ inputs.platform }} ${{ inputs.simbox_run }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        type: choice
+        options: [ios, android]
+        default: ios
+        description: Device platform (Android uses Linux/KVM)
+      runner_labels:
+        type: string
+        default: ""
+        description: JSON array of runner labels (empty uses platform default)
+      simbox_run:
+        type: string
+        default: ""
+        description: Run id assigned by Simbox (empty for manual runs)
+
+permissions:
+  contents: read
+
+jobs:
+  simbox:
+    runs-on: ${{ fromJSON(inputs.runner_labels || (inputs.platform == 'android' && '["ubuntu-latest"]' || '["macos-latest"]')) }}
+    timeout-minutes: 360
+    steps:
+      - id: simbox_prepare
+        name: Prepare Simbox
+        uses: TouchTechClub/runner@v1
+        with:
+          step: prepare
+          platform: ${{ inputs.platform }}
+      - id: simbox_start
+        name: Start devices
+        uses: TouchTechClub/runner@v1
+        with:
+          step: start
+          platform: ${{ inputs.platform }}
+          token: ${{ secrets.SIMBOX_TOKEN }}
+          run_id: ${{ inputs.simbox_run }}
+      - id: simbox_serve
+        name: Serve devices
+        uses: TouchTechClub/runner@v1
+        with:
+          step: serve
+          platform: ${{ inputs.platform }}
